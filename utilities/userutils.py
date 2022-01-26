@@ -22,10 +22,6 @@ log = logging.getLogger('file')
 
 SECRET_KEY          =   secrets.token_bytes()
 
-role_codes_filepath =   config.ROLE_CODES_URL
-json_file_dir       =   config.ROLE_CODES_DIR_PATH
-json_file_name      =   config.ROLE_CODES_FILE_NAME
-
 mail_server         =   config.MAIL_SENDER
 mail_ui_link        =   config.BASE_URL
 reset_pwd_link      =   config.RESET_PWD_ENDPOINT
