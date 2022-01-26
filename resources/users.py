@@ -144,19 +144,25 @@ class StatusUpdate(Resource):
 class FollowUser(Resource):
     def post(self):
         body = request.get_json()
-        follow_ids = body["followUser"]
-        token   = request.headers["auth-token"]
+        if "users" not in body or not body["users"]:
+            return post_error("Data Missing", "users not found", None), 400
 
-        token_validity = UserUtils.token_validation(token)
-        if "errorID" in token_validity :
-            return token_validity, 400
-        user_validity = UserUtils.validate_username(token_validity["userName"])
-        if user_validity is not None:
-            return user_validity, 400
+        users = body["users"]
+        user_id = None
+        user_id = request.headers["x-user-id"]
+        log.info("Updation request received for {} user/s".format(len(users)))
+        log.info("User/s validation started")
+        for i, user in enumerate(users):
+            validity = UserUtils.validate_user_input_updation(user)
+            if validity is not None:
+                log.info("User validation failed for user{}".format(i + 1))
+                return validity, 400
+        log.info("Users are validated")
 
         try:
-            result = userRepo.follow_user(user_validity["userName"], follow_ids)
+            result = userRepo.update_users(users, user_id)
             if result == True:
+                log.info("User/s updation successful")
                 res = CustomResponse(Status.SUCCESS_USR_UPDATION.value, None)
                 return res.getresjson(), 200
             else:

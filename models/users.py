@@ -36,7 +36,42 @@ class UserManagementModel(object):
                 "Database  exception", "User creation failed due to databse error", None
             )
 
-    
+    def user_login(self,user_name, password):
+        """User Login
+
+        fetching token from db for previously logged in user,
+        validating the token,
+        generating new token in case of new user or expired token.
+        """
+
+        try:
+            #searching for token against the user_name
+            token_available = UserUtils.get_token(user_name)
+
+            if token_available["status"] == False:
+                log.info("Generating new token for {}".format(user_name))
+                #issuing new token
+                new_token   =   UserUtils.generate_token({"user_name":user_name},USR_TOKEN_MONGO_COLLECTION)
+                #dict value is returned if generate_token returned error
+                if isinstance(new_token,dict):
+                    log.info("Failed to generate new token for {}".format(user_name))
+                    return new_token
+                else:
+                    return_data = {
+                        "userName": user_name,
+                        "token": new_token.decode("UTF-8")}
+                    return return_data
+
+            elif token_available["status"] == True:
+                log.info(f"Returning back existing token for {user_name}")
+                token = token_available["data"]
+                return_data = {
+                    "userName": user_name,
+                    "token": token}
+                return return_data
+        except Exception as e:
+            log.exception(f"Database connection exception :{str(e)} ")
+            return post_error("Database  exception", "An error occurred while processing on the database:{}".format(str(e)))
 
     def user_logout(self, user_name):
         """User Logout

@@ -1,2 +1,0 @@
-2022-01-26 23:02:11,732 INFO file MainThread : starting server at 0.0.0.0 at port 5001
-2022-01-26 23:02:11,734 INFO werkzeug MainThread :  * Running on http://0.0.0.0:5001/ (Press CTRL+C to quit)
