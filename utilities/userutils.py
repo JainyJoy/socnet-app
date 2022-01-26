@@ -148,7 +148,7 @@ class UserUtils:
             return post_error("Invalid token", "Not a valid token", None)
 
     @staticmethod
-    def generate_token(userdetails, collection):
+    def generate_token(userdetails):
         """Issuing new token
 
         defining expiry period for token,
@@ -163,7 +163,7 @@ class UserUtils:
             return token
         except Exception as e:
             log.info(f"Database connection exception :{str(e)}")
-            return post_error("Database connection exception", "An error occurred while connecting to the database", None)
+            return post_error("Exception Occurred", f"Exception Ocuured : {e}", None)
 
     @staticmethod
     def get_token(user_name):
