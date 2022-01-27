@@ -43,12 +43,12 @@ class CreateUser(Resource):
 class UserLogin(Resource):
     def post(self):
         body = request.get_json()
-        if "email" not in body or not body["email"]:
+        if "userName" not in body or not body["userName"]:
             return post_error("Data Missing", "email not found", None), 400
         if "password" not in body or not body["password"]:
             return post_error("Data Missing", "password not found", None), 400
 
-        email = body["email"]
+        email = body["userName"]
         password = body["password"]
         log.info("Request for login from {}".format(email))
 
@@ -58,7 +58,7 @@ class UserLogin(Resource):
             return validity, 400
         log.info("Login credentials check passed for {}".format(email))
         try:
-            result = userRepo.user_login(email, password)
+            result = userRepo.user_login(email)
             if "errorID" in result:
                 log.exception("Login failed for {}".format(email))
                 return result, 400
@@ -87,11 +87,11 @@ class UserLogout(Resource):
             result = userRepo.user_logout(user_name)
             if result == False:
                 log.info("Logout failed for {}".format(user_name))
-                res = CustomResponse(Status.FAILURE_USR_LOGOUT.value, None)
+                res = CustomResponse(Status.FAILURE_BAD_REQUEST.value, None)
                 return res.getresjson(), 400
             else:
                 log.info("{} logged out successfully".format(user_name))
-                res = CustomResponse(Status.SUCCESS_USR_LOGOUT.value, None)
+                res = CustomResponse(Status.SUCCESS.value, None)
             return res.getres()
         except Exception as e:
             log.exception("Exception while logout: " + str(e))
@@ -101,6 +101,7 @@ class UserLogout(Resource):
                 ),
                 400,
             )
+
 
 
 
@@ -123,7 +124,7 @@ class StatusUpdate(Resource):
             result = userRepo.status_update(token_validity["userName"], message,tags)
             if result == True:
                 log.info("User/s updation successful")
-                res = CustomResponse(Status.SUCCESS_USR_UPDATION.value, None)
+                res = CustomResponse(Status.SUCCESS.value, None)
                 return res.getresjson(), 200
             else:
                 log.info("User updation failed | {}".format(str(result)))
@@ -144,23 +145,19 @@ class StatusUpdate(Resource):
 class FollowUser(Resource):
     def post(self):
         body = request.get_json()
-        if "users" not in body or not body["users"]:
-            return post_error("Data Missing", "users not found", None), 400
 
-        users = body["users"]
-        user_id = None
-        user_id = request.headers["x-user-id"]
-        log.info("Updation request received for {} user/s".format(len(users)))
-        log.info("User/s validation started")
-        for i, user in enumerate(users):
-            validity = UserUtils.validate_user_input_updation(user)
-            if validity is not None:
-                log.info("User validation failed for user{}".format(i + 1))
-                return validity, 400
-        log.info("Users are validated")
+        follow_usr = body["follow_user"]
+        token   = request.headers["auth-token"]
+
+        token_validity = UserUtils.token_validation(token)
+        if "errorID" in token_validity :
+            return token_validity, 400
+        user_validity = UserUtils.validate_username(token_validity["userName"])
+        if user_validity is not None:
+            return user_validity, 400
 
         try:
-            result = userRepo.update_users(users, user_id)
+            result = userRepo.follow_user(token_validity["userName"],follow_usr)
             if result == True:
                 log.info("User/s updation successful")
                 res = CustomResponse(Status.SUCCESS_USR_UPDATION.value, None)
@@ -181,28 +178,20 @@ class FollowUser(Resource):
             )
 
 class ViewFeeds(Resource):
-    def post(self):
-        body = request.get_json()
-        if "users" not in body or not body["users"]:
-            return post_error("Data Missing", "users not found", None), 400
-
-        users = body["users"]
-        user_id = None
-        user_id = request.headers["x-user-id"]
-        log.info("Updation request received for {} user/s".format(len(users)))
-        log.info("User/s validation started")
-        for i, user in enumerate(users):
-            validity = UserUtils.validate_user_input_updation(user)
-            if validity is not None:
-                log.info("User validation failed for user{}".format(i + 1))
-                return validity, 400
-        log.info("Users are validated")
+    def get(self):
+        token   = request.headers["auth-token"]
+        token_validity = UserUtils.token_validation(token)
+        if "errorID" in token_validity :
+            return token_validity, 400
+        user_validity = UserUtils.validate_username(token_validity["userName"])
+        if user_validity is not None:
+            return user_validity, 400
 
         try:
-            result = userRepo.update_users(users, user_id)
+            result = userRepo.view_feeds(token_validity["userName"])
             if result == True:
                 log.info("User/s updation successful")
-                res = CustomResponse(Status.SUCCESS_USR_UPDATION.value, None)
+                res = CustomResponse(Status.SUCCESS.value, None)
                 return res.getresjson(), 200
             else:
                 log.info("User updation failed | {}".format(str(result)))

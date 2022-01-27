@@ -1,39 +1,30 @@
 import logging
-import pymongo
 log = logging.getLogger('file')
-import config
+from db import get_db
 
-
-class UserRepo:
+class UserModel:
     
-    def __init__(self):
-        pass
-        
-    #method to instantiate mongo client object
-    def instantiate(self):
-        client = pymongo.MongoClient(config.MONGO_DB_SCHEMA)
-        return client
-
     #insert operation on mongo
-    def insert(self, data):
-        col = self.get_mongo_instance()
-        if isinstance(data, dict):
-            data = [data]
-        col.insert_many(data)
-        return len(data)
+    def insert(self, col,data):
+        try:
+            if isinstance(data, dict):
+                data = [data]
+            col.insert_many(data)
+            return True
+        except Exception as e:
+            log.exception(f'Exception in repo insert: {e}', e)
 
     #mongo upsert 
-    def upsert(self, condition, object_in):
+    def update(self,col, condition, object_in,upsert=False):
         try:
-            col = self.get_mongo_instance()
-            col.update(condition,object_in, upsert=True)
+            col.update(condition,object_in, upsert)
+            return True
         except Exception as e:
             log.exception(f'Exception in repo upsert: {e}', e)
 
     # Searches the object from mongo collection
-    def search(self, query, exclude=None, offset=None, res_limit=None):
+    def search(self,col, query, exclude=None, offset=None, res_limit=None):
         try:
-            col = self.get_mongo_instance()
             if offset is None and res_limit is None:
                 res = col.find(query, exclude).sort([('_id', 1)])
             else:
@@ -46,6 +37,12 @@ class UserRepo:
             log.exception(f'Exception in repo search: {e}', e)
             return []
     
+    def remove(self, col,cond):
+        try:
+            col.remove(cond)
+            return True
+        except Exception as e:
+            log.exception(f'Exception in repo insert: {e}', e)
 
 
 

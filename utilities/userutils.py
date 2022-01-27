@@ -8,16 +8,12 @@ import jwt
 import secrets
 from .app_enums import EnumVals
 import config
-import json
-from datetime import datetime,timedelta
-import requests
+from datetime import datetime, timedelta
 from flask_mail import Mail, Message
 from app import mail
 from flask import render_template
-from config import USR_MONGO_COLLECTION
-
+from config import USR_MONGO_COLLECTION, USR_TOKEN_MONGO_COLLECTION
 import logging
-
 log = logging.getLogger('file')
 
 SECRET_KEY          =   secrets.token_bytes()
@@ -107,20 +103,9 @@ class UserUtils:
             #connecting to mongo instance/collection
             collections = db.get_db()[USR_MONGO_COLLECTION]  
             #searching username with verification status = True 
-            user_record = collections.find({"email": email}) 
+            user_record = collections.find({"userName": email}) 
             if user_record.count() != 0:
-                for usr in user_record:
-                    if usr["isVerified"] == True:
-                        log.info("Email is already taken")
-                        return post_error("Data not valid", "This email address is already registered with ULCA. Please use another email address.", None)
-                    register_time = usr["registeredTime"]
-                    #checking whether verfication link had expired or not
-                    if (datetime.utcnow() - register_time) < timedelta(hours=verify_mail_expiry):
-                        log.exception("{} already did a signup, asking them to revisit their mail for verification".format(email))
-                        return post_error("Data Not valid","This email address is already registered with ULCA. Please click on the verification link sent on your email address to complete the verification process.",None)
-                    elif (datetime.utcnow() - register_time) > timedelta(hours=verify_mail_expiry):
-                        #Removing old records if any
-                        collections.delete_many({"email": email})
+                return post_error("Data not valid", "This email address is already registered . Please use another email address.", None)
                     
             log.info("Email is not already taken, validated")
         except Exception as e:
@@ -136,73 +121,35 @@ class UserUtils:
         decoding the token,
         updating user token status on database in case of token expiry.
         """
-       
         try:
             decoded = jwt.decode(token, config.SECRET_KEY, algorithm='HS256')
+            print(decoded,"*************")
             return decoded
         except jwt.exceptions.ExpiredSignatureError as e:
-            log.exception("Auth-token expired, time limit exceeded",  MODULE_CONTEXT, e)
-            return post_error("Invalid token", "User session timed out, Please login again", None)
+            log.exception("Auth-token expired, time limit exceeded")
+            return post_error("Invalid token", "User session timed out, Please login again")
         except Exception as e:
-            log.exception("Auth-token expired, jwt decoding failed",  MODULE_CONTEXT, e)
-            return post_error("Invalid token", "Not a valid token", None)
+            log.exception("Auth-token expired, jwt decoding failed")
+            return post_error("Invalid token", "Not a valid token")
 
     @staticmethod
-    def generate_token(userdetails, collection):
+    def generate_token(userdetails):
         """Issuing new token
 
         defining expiry period for token,
         jwt token generated with payload as user_name.
         """
         try:
+            # seting time limit for token expiry
+            time_limit = datetime.utcnow() + timedelta(hours=token_life)
             #creating payload for token 
-            payload = {"userName": userdetails["userName"], "createdAt": str(datetime.datetime.utcnow())}
+            payload = {"userName": userdetails["userName"], "exp": time_limit}
             #generating token
-            token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
-            log.info(f"New token issued for {(userdetails['userName'])}") 
+            token = jwt.encode(payload, config.SECRET_KEY, algorithm='HS256')
             return token
         except Exception as e:
             log.info(f"Database connection exception :{str(e)}")
             return post_error("Database connection exception", "An error occurred while connecting to the database", None)
-
-    @staticmethod
-    def get_token(user_name):
-        """Token Retrieval for login 
-        
-        fetching token for the desired user_name,
-        validating the token(user_name matching, expiry check),
-        updating the token status on db if the token had expired.
-        """
-        try:
-            #connecting to mongo instance/collection
-            collections = db.get_db()[USR_TOKEN_MONGO_COLLECTION] 
-            #searching for token against the user_name
-            record = collections.find({"user": user_name, "active": True}, {"_id": 0, "token": 1, "secret_key": 1})
-            if record.count() == 0:
-                log_info("No active token found for:{}".format(user_name), MODULE_CONTEXT)
-                return {"status": False, "data": None}
-            else:
-                for value in record:
-                    secret_key = value["secret_key"]
-                    token = value["token"]
-                    try:
-                        #decoding the jwt token using secret-key
-                        jwt.decode(token, secret_key, algorithm='HS256')
-                        log_info("Token validated for:{}".format(user_name), MODULE_CONTEXT)
-                        return({"status": True, "data": token})
-                    #expired-signature error
-                    except jwt.exceptions.ExpiredSignatureError as e:
-                        log_exception("Token for {} had expired, exceeded the timeLimit".format(user_name),  MODULE_CONTEXT, e)
-                        #updating token status on token-collection
-                        collections.update({"token": token}, { "$set": {"active": False}})
-                        return({"status": False, "data": None})
-                    #falsy token error
-                    except Exception as e:
-                        log_exception("Token not valid for {}".format(user_name),  MODULE_CONTEXT, e)
-                        return({"status": False, "data": None})
-        except Exception as e:
-            log.exception("Database connection exception ",  MODULE_CONTEXT, e)
-            return({"status": "Database connection exception", "data": None})
 
 
     @staticmethod
@@ -258,14 +205,11 @@ class UserUtils:
         try:
             collections = db.get_db()[USR_MONGO_COLLECTION]
             #fetching the user details from db
-            result = collections.find({'email': user_email}, {
+            result = collections.find({'userName': user_email}, {
                 'password': 1, '_id': 0,'isActive':1})
             if result.count() == 0:
                 log.info("{} is not a registred user".format(user_email))
-                return post_error("Not verified", "This email address is not registered with SOCNET APP. Please sign up.", None)
-            if result[0]["isActive"]== False:
-                log.info("{} is not an active user".format(user_email))
-                return post_error("Not active", "User account is inactive", None)
+                return post_error("Not verified", "This email address is not registered with the system. Please sign up.", None)
             password_in_db = result[0]["password"].encode("utf-8")
             try:
                 if bcrypt.checkpw(password.encode("utf-8"), password_in_db)== False:

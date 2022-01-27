@@ -22,11 +22,12 @@ USR_TOKEN_MONGO_COLLECTION      =   os.environ.get('UMS_USR_KEY_COLLECTION', 'ul
 SECRET_KEY                      =   os.environ.get('UMS_SECRET_KEY',"secret_key")
 #common-variables
 MIN_AGE_ALLOWED         =   os.environ.get('UMS_PASSWORD_MIN_LENGTH', 15)
+PWD_MIN_LENGTH          =   os.environ.get('UMS_PASSWORD_MAX_LENGTH', 6)
 PWD_MAX_LENGTH          =   os.environ.get('UMS_PASSWORD_MAX_LENGTH', 25)
 EMAIL_MAX_LENGTH        =   os.environ.get('UMS_EMAIL_MAX_LENGTH', 256)
 OFFSET_VALUE            =   os.environ.get('UMS_OFFSET_VALUE', 0)
 LIMIT_VALUE             =   os.environ.get('UMS_LIMIT_VALUE', 20)
-AUTH_TOKEN_EXPIRY_HRS   =   os.environ.get('UMS_TOKEN_EXP_HRS', 24)
+AUTH_TOKEN_EXPIRY_HRS   =   os.environ.get('UMS_TOKEN_EXP_HRS', 1)
 ADMIN_ROLE_KEY          =   os.environ.get('UMS_ADMIN_ROLE_KEY', 'ADMIN')
 LOGIN_AUTENTICATOR      =   os.environ.get('UMS_LOGIN_AUTENTICATORS',['ULCA'])
 

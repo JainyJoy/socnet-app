@@ -21,8 +21,8 @@ Api(NET_SITE_BLUEPRINT).add_resource(UserLogout, "/v1/user/logout")
 
 Api(NET_SITE_BLUEPRINT).add_resource(StatusUpdate, "/v1/user/update")
 
-Api(NET_SITE_BLUEPRINT).add_resource(FollowUser, "/v1/user/update")
+Api(NET_SITE_BLUEPRINT).add_resource(FollowUser, "/v1/user/follow")
 
-Api(NET_SITE_BLUEPRINT).add_resource(ViewFeeds, "/v1/user/update")
+Api(NET_SITE_BLUEPRINT).add_resource(ViewFeeds, "/v1/user/read/feeds")
 
 Api(NET_SITE_BLUEPRINT).add_resource(Health, "/")

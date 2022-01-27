@@ -33,5 +33,4 @@ for blueprint in vars(routes).values():
 if __name__ == "__main__":
     log.info('starting server at {} at port {}'.format(
         config.HOST, config.PORT))
-    app.run(host=config.HOST)
-#     app.run(host=config.HOST, port=config.PORT, debug=config.DEBUG,threaded=True)
+    app.run(host=config.HOST, port=config.PORT, debug=config.DEBUG,threaded=True)

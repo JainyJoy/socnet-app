@@ -1,3 +1,4 @@
+from webbrowser import get
 from config import USR_MONGO_COLLECTION, USR_MESSAGE_COLLECTION, USR_TOKEN_MONGO_COLLECTION
 from models import post_error, UserModel
 from utilities import UserUtils
@@ -6,7 +7,7 @@ import logging
 log = logging.getLogger('file')
 import datetime
 
-# userModel   =   UserManagementModel()
+userModel   =   UserModel()
 
 class UserManagementRepositories:
     
@@ -19,14 +20,15 @@ class UserManagementRepositories:
         user_data["userID"]        =   user_id
         user_data["userName"]      =   user["email"]
         user_data["firstName"]     =   user["firstName"]
-        user_data["lasName"]       =   user["lasName"]
+        user_data["lastName"]      =   user["lastName"]
         user_data["password"]      =   hashed.decode("utf-8")
         user_data["gender"]        =   user["gender"]
         user_data["age"]           =   user["age"]
         user_data["isActive"]      =   True
         user_data["createdAt"]     =   datetime.datetime.utcnow()
 
-        result = UserModel.insert(USR_MONGO_COLLECTION,user_data)
+        usr_collection = get_db()[USR_MONGO_COLLECTION]
+        result = userModel.insert(usr_collection,user_data)
         if not result:
             return False
 
@@ -41,25 +43,26 @@ class UserManagementRepositories:
 
         try:
             #searching for token against the user_name
-            token_available = UserModel.search(USR_TOKEN_MONGO_COLLECTION,{"userName":user_name,"active":True},{"_id":0})
-            if token_available is not None:
+            tok_collection = get_db()[USR_TOKEN_MONGO_COLLECTION]
+            token_available = userModel.search(tok_collection,{"userName":user_name,"active":True},{"_id":0})
+            if token_available:
                 validity = UserUtils.token_validation(token_available[0]["token"])
                 if "errorID" not in validity:
                     return {"userName": user_name,"token": token_available[0]["token"]}
 
             log.info(f"Generating new token for {user_name}")
             new_token   =   UserUtils.generate_token({"userName":user_name})
-            UserModel.insert(USR_TOKEN_MONGO_COLLECTION,{"userName":user_name,"token":new_token,"active":True})
-            return {"userName": user_name,"token": new_token.decode("UTF-8")}
-
-        
+            if "errorID" not in new_token:
+                userModel.insert(tok_collection,{"userName":user_name,"token":new_token,"active":True})
+                return {"userName": user_name,"token": new_token}
         except Exception as e:
             log.exception(f"Database connection exception :{str(e)} ")
             return post_error("Database  exception", "An error occurred while processing on the database:{}".format(str(e)))
 
     def user_logout(self,user_name):
-        result = userModel.user_logout(user_name)
-        return result
+        tok_collection = get_db()[USR_TOKEN_MONGO_COLLECTION]
+        userModel.remove(tok_collection,{"userName":user_name})
+        return True
 
     def status_update(self,userName,message,tags):
         record          =   {}
@@ -69,21 +72,25 @@ class UserManagementRepositories:
         record["tags"]=tags
         record["postedTime"]=str(datetime.datetime.utcnow())
 
-        result = UserModel.insert(USR_MONGO_COLLECTION,record)
+        msg_collection = get_db()[USR_MESSAGE_COLLECTION]
+        result = userModel.insert(msg_collection,record)
         if not result:
             return False
     
     def follow_user(self,userName,follow_id):
-        result = UserModel.update(USR_MONGO_COLLECTION,{"userName":userName},{ "$push": { "followingIDs":follow_id } })
+        usr_collection = get_db()[USR_MONGO_COLLECTION]
+        result = UserModel.update(usr_collection,{"userName":userName},{ "$push": { "followingIDs":follow_id } })
         if not result:
             return False
 
-    def view_feeds(self,userName,follow_id):
-        user = UserModel.search(USR_MONGO_COLLECTION,{"userName":userName},{"followingIDs":1})
+    def view_feeds(self,userName):
+        usr_collection = get_db()[USR_MONGO_COLLECTION]
+        user = UserModel.search(usr_collection,{"userName":userName},{"followingIDs":1})
         if not user:
             return False
         followingIDs = user[0]["followingIDs"]
-        result = UserModel.search(USR_MESSAGE_COLLECTION,{"userName":{"$in":followingIDs}},{"message":1})
+        msg_collection = get_db()[USR_MESSAGE_COLLECTION]
+        result = UserModel.search(msg_collection,{"userName":{"$in":followingIDs}},{"message":1})
         if not result:
             return False
         return result
