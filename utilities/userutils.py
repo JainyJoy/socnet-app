@@ -123,7 +123,6 @@ class UserUtils:
         """
         try:
             decoded = jwt.decode(token, config.SECRET_KEY, algorithm='HS256')
-            print(decoded,"*************")
             return decoded
         except jwt.exceptions.ExpiredSignatureError as e:
             log.exception("Auth-token expired, time limit exceeded")
@@ -223,28 +222,7 @@ class UserUtils:
             return post_error("Invalid Credentials", "Incorrect username or password", None)
 
 
-    @staticmethod
-    def generate_email_notification(user_records,task_id):
-
-        for user_record in user_records:
-            email       =   user_record["email"]
-            timestamp   =   eval(str(time.time()).replace('.', '')[0:13])
-            name        =   None
-            user_id     =   None
-            link        =   None
-
-            email_subject   =   EnumVals.ConfirmationSubject.value
-            template        =   'usr_confirm_registration.html'
-            name            =   user_record["name"]
-            try:
-                msg = Message(subject=email_subject,sender=mail_server,recipients=[email])
-                msg.html = render_template(template,ui_link=mail_ui_link,user_name=name)
-                mail.send(msg)
-                log.info("Generated email notification for {} ".format(email))
-            except Exception as e:
-                log.exception("Exception while generating email notification | {}".format(str(e)))
-                return post_error("Exception while generating email notification","Exception occurred:{}".format(str(e)),None)
-            
+   
     @staticmethod
     def validate_username(user_email):
         """Validating userName/Email"""
