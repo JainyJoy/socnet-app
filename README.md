@@ -1,6 +1,6 @@
 # socnet-app
 
-A  Restful API developed with Flask framework for assignemnt purpose.
+A  Restful API developed with Flask framework for assignment purpose.
 
 ## Prerequisites
 - python 3.7
